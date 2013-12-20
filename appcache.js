@@ -1,8 +1,9 @@
 var async = require("async");
 var glob = require("glob");
+var _ = require("lodash");
 
 var AppCache = function(options) {
-    this._options = options || {};
+    this._options = _.clone(options) || {};
 
     this._data = {
         cache: [],
@@ -12,6 +13,8 @@ var AppCache = function(options) {
     this._globbedFiles = {};
 
     this._dirty = true;
+
+    this._bump();
 };
 
 AppCache.prototype = {
@@ -62,21 +65,11 @@ AppCache.prototype = {
                 dest.setHeader("Expires", "0");
             }
 
-            dest.emit(data);
+            dest.write(data);
+            dest.end();
         });
 
         return dest;
-    },
-
-    clone: function() {
-        var clone = new AppCache();
-
-        clone._data = {
-            cache: this.data.cache.slice(0),
-            network: this.data.network.slice(0)
-        };
-
-        return clone;
     },
 
     route: function() {
@@ -87,11 +80,24 @@ AppCache.prototype = {
         };
     },
 
+    clone: function() {
+        var clone = new AppCache();
+
+        clone._options = _.clone(this._options);
+        clone._data = _.clone(this._data);
+        clone._globbedFiles = _.clone(this.globbedFiles);
+        clone._dirty = this._dirty;
+        clone._key = this._key;
+
+        return clone;
+    },
+
     _buildString: function() {
+        var self = this;
         var str = [];
 
         var addFiles = function(name) {
-            this._data[name].forEach(function(file) {
+            self._data[name].forEach(function(file) {
                 if (typeof file === "string") {
                     str.push(file);
                 } else {
@@ -116,7 +122,7 @@ AppCache.prototype = {
     },
 
     _glob: function(file, callback) {
-        if (file.indexOf("http") === 0) {
+        if (file.indexOf("http") === 0 || file.indexOf("*") < 0) {
             callback(null, file);
         } else {
             var options = {};
@@ -143,10 +149,10 @@ AppCache.prototype = {
         this._dirty = false;
         this._globbedFiles = {};
 
-        this._bump();
-
         async.each(Object.keys(this._data), function(key, callback) {
-            async.concat(self._data[key], self._glob, function(err, files) {
+            async.concat(self._data[key], function(file, callback) {
+                self._glob(file, callback);
+            }, function(err, files) {
                 self._globbedFiles[key] = files;
                 callback(err);
             });
