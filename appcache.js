@@ -97,7 +97,7 @@ AppCache.prototype = {
         var str = [];
 
         var addFiles = function(name) {
-            self._data[name].forEach(function(file) {
+            self._globbedFiles[name].forEach(function(file) {
                 if (typeof file === "string") {
                     str.push(file);
                 } else {
