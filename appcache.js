@@ -106,6 +106,7 @@ AppCache.prototype = {
             })
         };
 
+        str.push("CACHE MANIFEST");
         str.push("# " + this._key);
 
         if (this._data.cache.length) {
