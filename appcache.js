@@ -130,9 +130,18 @@ AppCache.prototype = {
 
             if (this._options.cwd) {
                 options.cwd = this._options.cwd;
+                file = file.replace(/^\//, "");
             }
 
-            glob(file, options, callback);
+            glob(file, options, function(err, files) {
+                if (files) {
+                    files = files.map(function(file) {
+                        return "/" + file;
+                    });
+                }
+
+                callback(err, files);
+            });
         }
     },
 
@@ -151,7 +160,7 @@ AppCache.prototype = {
         this._globbedFiles = {};
 
         async.each(Object.keys(this._data), function(key, callback) {
-            async.concat(self._data[key], function(file, callback) {
+            async.concatSeries(self._data[key], function(file, callback) {
                 self._glob(file, callback);
             }, function(err, files) {
                 self._globbedFiles[key] = files;
